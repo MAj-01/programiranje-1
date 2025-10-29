@@ -1,7 +1,12 @@
 (*----------------------------------------------------------------------------*
  # Rekurzija
 [*----------------------------------------------------------------------------*)
-
+let rec app l1 l2 =
+  match l1 with
+  | [] -> l2
+  | x::xs -> (
+    x :: (app xs l2)
+  )
 (*----------------------------------------------------------------------------*
  Napišite spodaj opisane funkcije, ne da bi uporabljali funkcije iz standardne
  knjižnice. Kjer to kažejo primeri, napišite tudi repno rekurzivne različice z
@@ -17,7 +22,10 @@
  rekurzivna.
 [*----------------------------------------------------------------------------*)
 
-let reverse _ = ()
+let rec reverse l1 =
+  match l1 with
+  | [] -> l1
+  | x::xs -> app [x] (reverse xs)
 
 (*----------------------------------------------------------------------------*
  ## Funkcija `repeat`
@@ -28,7 +36,12 @@ let reverse _ = ()
   vrednosti `n` funkcija vrne prazen seznam.
 [*----------------------------------------------------------------------------*)
 
-let rec repeat _ _ = ()
+let rec repeat sez n =
+  if n <= 0 then []
+  else
+    match n with 
+    | n -> sez :: (repeat sez (n - 1))
+ 
 
 let primer_repeat_1 = repeat "A" 5
 (* val primer_repeat_1 : string list = ["A"; "A"; "A"; "A"; "A"] *)
@@ -47,7 +60,13 @@ let primer_repeat_2 = repeat "A" (-2)
  funkcije `List.init`.
 [*----------------------------------------------------------------------------*)
 
-let range _ = ()
+let range n = 
+  let rec aux n acc =
+    if n < 0 then acc
+    else
+      aux (n-1) (n :: acc)
+  in aux n []       
+
 
 let primer_range = range 10
 (* val primer_range : int list = [0; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10] *)
@@ -62,7 +81,11 @@ let primer_range = range 10
  ...`. Pri tem ne smete uporabiti vgrajene funkcije `List.map`.
 [*----------------------------------------------------------------------------*)
 
-let rec map _ _ = ()
+let rec map f l1 =
+  match l1 with 
+  | [] -> []
+  | x::xs -> (f x) :: (map f xs)
+
 
 let primer_map_1 =
   let plus_two = (+) 2 in
@@ -74,7 +97,13 @@ let primer_map_1 =
  `map`.
 [*----------------------------------------------------------------------------*)
 
-let map_tlrec _ _ = ()
+let map_tlrec f l1 = 
+  let rec aux f l1 acc =
+    match l1 with
+    | [] -> List.rev acc
+    |x::xs -> aux f xs (f x :: acc)
+  in aux f l1 [] 
+
 
 let primer_map_2 =
   let plus_two = (+) 2 in
@@ -101,7 +130,12 @@ let primer_map_2 =
  Pri tem ne smete uporabiti vgrajene funkcije `List.mapi`.
 [*----------------------------------------------------------------------------*)
 
-let mapi _ _ = ()
+let mapi f l1 =
+  let rec aux f l1 i acc =
+    match l1 with
+    | [] -> List.rev acc
+    | x::xs -> aux f xs (i + 1) (f i x :: acc)
+in aux f l1 0 [] 
 
 let primer_mapi = mapi (+) [0; 0; 0; 2; 2; 2]
 (* val primer_mapi : int list = [0; 1; 2; 5; 6; 7] *)
@@ -116,7 +150,11 @@ let primer_mapi = mapi (+) [0; 0; 0; 2; 2; 2]
  Pri tem ne smete uporabiti vgrajene funkcije `List.combine`.
 [*----------------------------------------------------------------------------*)
 
-let rec zip _ _ = ()
+let rec zip sez1 sez2 =
+  match (sez1, sez2) with 
+  | ([], []) -> []
+  | (x::xs, y::ys) -> (x, y) :: zip xs ys
+  | _ -> failwith "Napaka v dolžinah seznamov"
 
 let primer_zip_1 = zip [1; 1; 1; 1] [0; 1; 2; 3]
 (* val primer_zip_1 : (int * int) list = [(1, 0); (1, 1); (1, 2); (1, 3)] *)
@@ -133,8 +171,12 @@ let primer_zip_1 = zip [1; 1; 1; 1] [0; 1; 2; 3]
   Pri tem ne smete uporabiti vgrajene funkcije `List.split`.
 [*----------------------------------------------------------------------------*)
 
-let rec unzip _ = ()
-
+let rec unzip sez =
+  match sez with 
+  | [] -> ([], [])
+  | (x, y) :: xs ->
+    let (xs_li, ys_li) = unzip xs in
+    (x :: xs_li, y :: ys_li)
 let primer_unzip_1 = unzip [(0,"a"); (1,"b"); (2,"c")]
 (* val primer_unzip_1 : int list * string list = ([0; 1; 2], ["a"; "b"; "c"]) *)
 
@@ -142,7 +184,12 @@ let primer_unzip_1 = unzip [(0,"a"); (1,"b"); (2,"c")]
  Funkcija `unzip_tlrec` je repno rekurzivna različica funkcije `unzip`.
 [*----------------------------------------------------------------------------*)
 
-let unzip_tlrec _ = ()
+let unzip_tlrec sez =
+  let rec aux sez acc1 acc2 = 
+    match sez with
+    | [] -> (List.rev acc1, List.rev acc2)
+    | (x, y) :: xs -> aux xs (x :: acc1) (y :: acc2)
+in aux sez [] []
 
 let primer_unzip_2 = unzip_tlrec [(0,"a"); (1,"b"); (2,"c")]
 (* val primer_unzip_2 : int list * string list = ([0; 1; 2], ["a"; "b"; "c"]) *)
@@ -162,7 +209,8 @@ let primer_unzip_2 = unzip_tlrec [(0,"a"); (1,"b"); (2,"c")]
  ```
 [*----------------------------------------------------------------------------*)
 
-let rec loop _ _ _ = ()
+let rec loop c f x = 
+  if c x then loop c f (f x) else x
 
 let primer_loop = loop (fun x -> x < 10) ((+) 4) 4
 (* val primer_loop : int = 12 *)
@@ -177,7 +225,13 @@ let primer_loop = loop (fun x -> x < 10) ((+) 4) 4
  ... xn)`. V primeru seznama z manj kot dvema elementoma naj vrne napako.
 [*----------------------------------------------------------------------------*)
 
-let rec fold_left_no_acc _ _ = ()
+let rec fold_left_no_acc f =
+  function
+  | [] | _ :: [] -> failwith "List to short"
+  | x :: y :: [] -> f x y 
+  | x :: y :: ts -> fold_left_no_acc f ((f x y) :: ts)
+
+
 
 let primer_fold_left_no_acc =
   fold_left_no_acc (^) ["F"; "I"; "C"; "U"; "S"]
@@ -193,7 +247,14 @@ let primer_fold_left_no_acc =
  x]`. Funkcija naj bo repno rekurzivna.
 [*----------------------------------------------------------------------------*)
 
-let apply_sequence _ _ _ = ()
+let apply_sequence f x n =
+  let rec apply_aux f x n acc =
+    if n < 0 then
+      List.rev acc
+    else 
+      apply_aux f (f x) (n - 1) (x :: acc)
+  in
+  apply_aux f x n [] 
 
 let primer_apply_sequence_1 = apply_sequence (fun x -> x * x) 2 5
 (* val primer_apply_sequence_1 : int list = [2; 4; 16; 256; 65536; 4294967296] *)
@@ -211,7 +272,13 @@ let primer_apply_sequence_2 = apply_sequence (fun x -> x * x) 2 (-5)
   Pri tem ne smete uporabiti vgrajene funkcije `List.filter`.
 [*----------------------------------------------------------------------------*)
 
-let rec filter _ _ = ()
+let rec filter f = 
+  function
+  | [] -> []
+  | x :: xs -> 
+    if f x then (x :: filter f xs) else filter f xs 
+
+
 
 let primer_filter = filter ((<)3) [0; 1; 2; 3; 4; 5]
 (* val primer_filter : int list = [4; 5] *)
@@ -227,7 +294,14 @@ let primer_filter = filter ((<)3) [0; 1; 2; 3; 4; 5]
   Pri tem ne smete uporabiti vgrajene funkcije `List.find` ali podobnih.
 [*----------------------------------------------------------------------------*)
 
-let rec exists _ _ = ()
+(* let rec exists f list =
+  if filter f list  = [] then false else true *)
+
+let rec exists f =
+  function
+  | [] -> false
+  | x :: xs -> 
+      if f x then true else exists f xs
 
 let primer_exists_1 = exists ((<) 3) [0; 1; 2; 3; 4; 5]
 (* val primer_exists_1 : bool = true *)
@@ -246,7 +320,12 @@ let primer_exists_2 = exists ((<) 8) [0; 1; 2; 3; 4; 5]
   Pri tem ne smete uporabiti vgrajene funkcije `List.find` ali podobnih.
 [*----------------------------------------------------------------------------*)
 
-let rec first _ _ _ = ()
+let rec first f default = 
+  function
+  | [] -> default
+  | x :: xs -> 
+    if f x then x else first f default xs 
+
 
 let primer_first_1 = first ((<) 3) 0 [1; 1; 2; 3; 5; 8]
 (* val primer_first_1 : int = 5 *)
