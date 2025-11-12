@@ -395,28 +395,35 @@ let iz_transpozicij st sez_t =
     let manjkajoce = List.filter (fun x -> not (List.mem x nepopolni_sez)) popolni_sez in 
     List.map (fun x -> [x; x]) manjkajoce
   in
-  let rec popolni_seznam sez st acc = 
-    let sez_st = List.flatten sez in
-    if List.length sez_st = st then
-      match sez with
-      | [] -> sez @ acc
-      | [a; b]:: xs -> popolni_seznam xs st ([b; a] :: acc)
-      | _ -> failwith "Napaka."
-    else
+  let dodaj_manjkajoce sez st =
+    let pretvorjen_sez = List.map pretvori_v_seznam sez in
+    let samo_st = List.flatten pretvorjen_sez in
+    if List.length samo_st = st then pretvorjen_sez
+    else 
       let pop_sez = seznam_stevil st in
-      let manjkajoca = poisci_manjkajoce pop_sez sez_st in
-      popolni_seznam (manjkajoca @ sez) st acc
+      let manjkajoca = poisci_manjkajoce pop_sez samo_st in
+      pretvorjen_sez @ manjkajoca
   in
-  let rec glavna sez i acc = 
-    match sez with
-    | [] -> List.rev acc
-    | [a; b] :: xs -> 
-      if a = i then glavna xs (i + 1) (b :: acc)
-      else glavna xs i acc
-    | _ -> failwith "Napaka."  
+  let rec dodaj_obratno_permutacijo novi_sez st acc = 
+    match novi_sez with
+    | [] -> novi_sez @ acc
+    | [a; b]:: xs -> dodaj_obratno_permutacijo xs st ([b; a] :: acc)
+    | _ -> failwith "Error"
+  in
+  let rec glavna sez i acc =
+    if i >= st then List.rev acc
+    else
+      let rec poisci_par i sez =
+        match sez with
+        | [] -> failwith "Error"
+        | [a; b] :: xs -> if a = i then b else poisci_par i xs
+        | _ -> failwith "Error."
+      in
+      let vrednost = poisci_par i sez in
+      glavna sez (i + 1) (vrednost :: acc)  
   in  
-  let pretvorjen_sez = List.map pretvori_v_seznam sez_t in
-  let koncni_seznam = popolni_seznam pretvorjen_sez st [] in  
+  let novi_sez = dodaj_manjkajoce sez_t st in
+  let koncni_seznam = dodaj_obratno_permutacijo novi_sez st [] @ novi_sez in  
 glavna koncni_seznam 0 []
 
 let primer_permutacije_9 = iz_transpozicij 4 [(0, 1); (2, 3)]
@@ -572,7 +579,29 @@ let primer_resitve : resitev = [|
  funkcija naj te možnosti ne uporablja, temveč naj sestavi in vrne novo tabelo.
 [*----------------------------------------------------------------------------*)
 
-let dodaj _ _ _ _ = ()
+type mreza = int option array array
+
+let dodaj i j n m =
+  let rec posodobi_stolpec vrstica trenutni_i i n acc =
+    if trenutni_i >= Array.length vrstica then Array.of_list (List.rev acc)
+    else
+      if trenutni_i = i then
+        posodobi_stolpec vrstica (trenutni_i + 1) i n (Some n :: acc)
+      else
+        posodobi_stolpec vrstica (trenutni_i + 1) i n (vrstica.(trenutni_i) :: acc)
+  in
+  let rec obdelaj_vrstice trenutni_i i j n mreza acc =
+    if trenutni_i >= Array.length mreza then Array.of_list (List.rev acc)
+    else
+      let trenutna_vrstica = mreza.(trenutni_i) in
+      if trenutni_i = i then
+        let nova_vrstica = posodobi_stolpec trenutna_vrstica 0 j n [] in
+        obdelaj_vrstice (trenutni_i + 1) i j n mreza (nova_vrstica :: acc)
+      else
+        obdelaj_vrstice (trenutni_i + 1) i j n mreza (trenutna_vrstica :: acc)
+  in
+obdelaj_vrstice 0 i j n m []
+
 
 let primer_sudoku_1 = primer_mreze |> dodaj 0 8 2
 (* val primer_sudoku_1 : mreza =
@@ -596,7 +625,30 @@ let primer_sudoku_1 = primer_mreze |> dodaj 0 8 2
  izpis v zgornji obliki.
 [*----------------------------------------------------------------------------*)
 
-let izpis_mreze _ = ""
+let izpis_mreze m =
+  let rec vrstica_izpis vrstica i acc =
+    if i >= Array.length vrstica then String.concat " " ("|" :: (List.rev acc))
+    else
+      if i = 2 || i = 5 || i = 8 then
+        match vrstica.(i) with
+        | Some x -> vrstica_izpis vrstica (i + 1) ("|" :: (string_of_int x :: acc))
+        | None -> vrstica_izpis vrstica (i + 1) ("|" :: ("." :: acc))
+      else
+        match vrstica.(i) with
+        | Some x -> vrstica_izpis vrstica (i + 1) (string_of_int x :: acc)
+        | None -> vrstica_izpis vrstica (i + 1) ("." :: acc)
+  in
+  let rec glavna_mreza m i acc =
+    if i >= Array.length m then String.concat "\n" ("+-------+-------+-------+" :: (List.rev acc))
+    else
+      let vrstica = vrstica_izpis m.(i) 0 [] in
+      if i = 2 || i = 5 || i = 8 then
+        glavna_mreza m (i + 1) ("+-------+-------+-------+" :: (vrstica :: acc))
+      else 
+        glavna_mreza m (i + 1) (vrstica :: acc)
+  in
+  glavna_mreza m 0 []
+
 
 let primer_sudoku_2 = primer_mreze |> izpis_mreze |> print_endline
 (* 
@@ -617,7 +669,27 @@ let primer_sudoku_2 = primer_mreze |> izpis_mreze |> print_endline
   val primer_sudoku_2 : unit = ()
 *)
 
-let izpis_resitve _ = ""
+let izpis_resitve m =
+  let rec vrstica_izpis vrstica i acc =
+    if i >= Array.length vrstica then String.concat " " ("|" :: (List.rev acc))
+    else
+      if i = 2 || i = 5 || i = 8 then
+        match vrstica.(i) with
+        | x -> vrstica_izpis vrstica (i + 1) ("|" :: ((string_of_int x) :: acc))
+      else
+        match vrstica.(i) with
+        | x -> vrstica_izpis vrstica (i + 1) (string_of_int x :: acc)
+  in
+  let rec glavna_mreza m i acc =
+    if i >= Array.length m then String.concat "\n" ("+-------+-------+-------+" :: (List.rev acc))
+    else
+      let vrstica = vrstica_izpis m.(i) 0 [] in
+      if i = 2 || i = 5 || i = 8 then
+        glavna_mreza m (i + 1) ("+-------+-------+-------+" :: (vrstica :: acc))
+      else 
+        glavna_mreza m (i + 1) (vrstica :: acc)
+  in
+  glavna_mreza m 0 []
 
 let primer_sudoku_3 = primer_resitve |> izpis_resitve |> print_endline
 (*
@@ -648,7 +720,24 @@ let primer_sudoku_3 = primer_resitve |> izpis_resitve |> print_endline
  mreži podana številka, v rešitvi nahaja enaka številka.
 [*----------------------------------------------------------------------------*)
 
-let ustreza _ _ = ()
+let ustreza m r = 
+  let rec vrstica_stanje vrstica_m vrstica_r i =
+    if i >= Array.length vrstica_m then true
+    else
+      match vrstica_m.(i) with
+      | Some x -> 
+        if string_of_int x = string_of_int vrstica_r.(i) then vrstica_stanje vrstica_m vrstica_r (i + 1)
+        else false
+      | None -> vrstica_stanje  vrstica_m vrstica_r (i + 1)
+  in
+  let rec glavna m r i =
+    if i >= Array.length m then true
+    else
+      if vrstica_stanje m.(i) r.(i) 0 then glavna m r (i + 1)
+      else false
+in 
+glavna m r 0
+
 
 let primer_sudoku_4 = ustreza primer_mreze primer_resitve
 (* val primer_sudoku_4 : bool = true *)
@@ -681,7 +770,18 @@ let primer_sudoku_4 = ustreza primer_mreze primer_resitve
  ```
 [*----------------------------------------------------------------------------*)
 
-let ni_v_vrstici _ _  = ()
+let ni_v_vrstici (m, index) st  =
+  let rec poisci_vrstica m index st i =
+    let vrstica = m.(index) in
+    if i >= Array.length vrstica then true
+    else 
+      match vrstica.(i) with 
+      | Some x -> 
+        if x = st then false
+        else poisci_vrstica m index st (i + 1)
+      | None -> poisci_vrstica m index st (i + 1)
+in
+poisci_vrstica m index st 0 
 
 let primer_sudoku_5 = ni_v_vrstici (primer_mreze, 0) 1
 (* val primer_sudoku_5 : bool = true *)
@@ -689,9 +789,37 @@ let primer_sudoku_5 = ni_v_vrstici (primer_mreze, 0) 1
 let primer_sudoku_6 = ni_v_vrstici (primer_mreze, 1) 1
 (* val primer_sudoku_6 : bool = false *)
 
-let ni_v_stolpci _ _  = ()
+let ni_v_stolpcu (m, index) st =
+  let rec poisci_stolpec m index st i =
+      if i >= Array.length m then true
+      else
+        let element = m.(i).(index) in
+        match element with
+        | Some x ->
+          if x = st then false
+          else poisci_stolpec m index st (i + 1)
+        | None -> poisci_stolpec m index st (i + 1)
+in
+poisci_stolpec m index st 0
 
-let ni_v_skatli _ _  = ()
+let ni_v_skatli (m, skatla) st =
+  let rec poisci_skatla m skatla st i j =
+    let zacetek_vrstica = (skatla / 3) * 3 in
+    let zacetek_stolpec = (skatla mod 3) * 3 in
+    let vrstica = zacetek_vrstica + i in
+    let stolpec = zacetek_stolpec + j in
+    if i >= 3 then true
+    else
+      if j >= 3 then poisci_skatla m skatla st (i + 1) 0
+      else
+        let element = m.(vrstica).(stolpec) in
+        match element with
+        | Some x ->
+          if x = st then false
+          else poisci_skatla m skatla st i (j + 1)
+        | None -> poisci_skatla m skatla st i (j + 1)
+in
+poisci_skatla m skatla st 0 0
 
 (*----------------------------------------------------------------------------*
  Napišite funkcijo `kandidati : mreza -> int -> int -> int list option`, ki
@@ -700,7 +828,44 @@ let ni_v_skatli _ _  = ()
  funkcija vrne `None`.
 [*----------------------------------------------------------------------------*)
 
-let kandidati _ _ _ = ()
+
+let kandidati m i j = 
+  let presek sez1 sez2 =
+    List.filter (fun x -> List.mem x sez2) sez1
+  in 
+  let st_skatle i j =
+    (i / 3) * 3 + (j / 3)
+  in 
+  let rec skatla_rek skatla index acc = 
+    if index > 9 then List.rev acc
+    else 
+      if ni_v_skatli (m, skatla) index then skatla_rek skatla (index + 1) (index :: acc)
+      else skatla_rek skatla (index + 1) acc
+  in
+  let rec vrstica_rek i index acc = 
+    if index > 9 then List.rev acc
+    else 
+      if ni_v_vrstici (m, i) index then vrstica_rek i (index + 1) (index :: acc)
+      else vrstica_rek i (index + 1) acc
+  in
+  let rec stolpec_rek j index acc = 
+    if index > 9 then List.rev acc
+    else
+      if ni_v_stolpcu (m, j) index then stolpec_rek j (index + 1) (index :: acc)
+      else stolpec_rek j (index + 1) acc
+  in
+  let glavna m i j =
+    let skatla_index = st_skatle i j in 
+    let sez_skatla = skatla_rek skatla_index 1 [] in
+    let sez_vrstica = vrstica_rek i 1 [] in
+    let sez_stolpec = stolpec_rek j 1 [] in
+    let presek_1 = presek sez_skatla sez_vrstica in
+    match m.(i).(j) with
+    | Some x -> None
+    | None -> Some (presek presek_1 sez_stolpec) 
+in
+glavna m i j    
+
 
 let primer_sudoku_7 = kandidati primer_mreze 0 2
 (* val primer_sudoku_7 : int list option = Some [1; 2; 3] *)
@@ -723,7 +888,41 @@ let primer_sudoku_8 = kandidati primer_mreze 0 0
  možnosti.*
 [*----------------------------------------------------------------------------*)
 
-let rec resi _ = ()
+let rec resi m =
+  let rec prazni i j acc =
+    let n = Array.length m in
+    if i >= n then 
+      List.rev acc
+    else if j >= n then 
+      prazni (i + 1) 0 acc
+    else
+      match m.(i).(j) with
+      | None -> 
+        prazni i (j + 1) ((i, j) :: acc)
+      | Some _ -> 
+        prazni i (j + 1) acc
+  in
+  let primerjaj_celici c1 c2 =
+    match c1, c2 with
+    | None, None -> None
+    | Some (i1, j1, k1), None -> Some (i1, j1, k1)
+    | None, Some (i2, j2, k2) -> Some (i2, j2, k2)
+    | Some (i1, j1, k1), Some (i2, j2, k2) ->
+      if List.length k1 < List.length k2 then
+        Some (i1, j1, k1)
+      else
+        Some (i2, j2, k2)
+  in
+  let rec najboljsa_celica sez trenutna_najb =
+    match sez with
+    | [] -> trenutna_najb
+    | celica :: ostale_celice ->
+      let poisci_kandidate (i, j) = kandidati m i j in
+      match poisci_kandidate celica with
+      | None -> None 
+      | Some sez_k ->
+
+  (*Naprej žal nisem uspel rešiti.*)
 
 let primer_sudoku_9 = resi primer_mreze
 (* val primer_sudoku_9 : resitev option =
