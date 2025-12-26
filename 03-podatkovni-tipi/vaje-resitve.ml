@@ -18,7 +18,7 @@
 
    Namig: Občudujte informativnost tipov funkcij.
   [*----------------------------------------------------------------------------*)
-
+  
 type euro = Euro of float
 type dollar = Dollar of float
 
@@ -164,7 +164,7 @@ type specialisation = Historian | Teacher | Researcher
 type status =
   | Newbie
   | Student of magic * int
-  | Employed of magic * specialisation
+  | Employed of magic * specialisation  
 
 type wizard = { name : string; status : status }
 
