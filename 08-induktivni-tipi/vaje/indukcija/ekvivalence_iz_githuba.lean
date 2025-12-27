@@ -101,44 +101,95 @@ theorem trd3 {A : Type} {xs : List A} : stakni xs [] = xs :=
 
 theorem trd4 {A : Type} {xs ys zs : List A} : stakni (stakni xs ys) zs = stakni xs (stakni ys zs) :=
   by
-    sorry
+    induction xs with
+    | nil =>
+      simp [stakni]
+    | cons x xs' ih =>
+      simp [stakni]
+      rw [ih]
 
 theorem trd5 {A : Type} {xs ys : List A} : obrni (stakni xs ys) = stakni (obrni ys) (obrni xs) :=
   by
-    sorry
+    induction xs with
+    | nil =>
+      simp [stakni, obrni, trd3]
+    | cons x xs' ih =>
+      simp [stakni, obrni]
+      rw [ih]
+      rw [trd4]
+
+
 
 theorem trd6 {A : Type} {xs : List A} : dolzina (obrni xs) = dolzina xs :=
   by
-    sorry
+    induction xs with
+    | nil =>
+      simp [obrni, dolzina]
+    | cons x xs' ih =>
+      simp [obrni, dolzina, trd2, ih]
+      rw [Nat.add_comm]
+
+
 
 
 theorem trd7 {A : Type} {xs : List A} : obrni (obrni xs) = xs :=
   by
-    sorry
+    induction xs with
+    | nil =>
+      simp [obrni]
+    | cons x xs' ih =>
+      simp [obrni, trd5, ih, stakni]
 
 -- 1.c. Seznam poljubnega tipa (List A), dodamo preslikave
 
 -- Definicija preslikave
 def preslikaj {A B : Type} : (A → B) → List A → List B :=
   fun f xs =>
-    sorry
+    match xs with
+    | [] => []
+    | x :: xs' => f x :: preslikaj f xs'
 
 -- Trditve
 theorem trd8 {A B C : Type} {f : A → B} {g : B → C} {xs : List A} : preslikaj g (preslikaj f xs) = preslikaj (g ∘ f) xs :=
   by
-    sorry
+    induction xs with
+    | nil =>
+      simp [preslikaj]
+    | cons x xs' ih =>
+      simp [preslikaj]
+      rw [ih]
+
 
 theorem trd9 {A : Type} {xs : List A} : preslikaj id xs = xs :=
   by
-    sorry
+    induction xs with
+    | nil =>
+      simp [preslikaj]
+    | cons x xs' ih =>
+      simp [preslikaj]
+      rw [ih]
+
 
 theorem trd10 {A B : Type} {f : A → B} {xs ys : List A} : preslikaj f (stakni xs ys) = stakni (preslikaj f xs) (preslikaj f ys) :=
   by
-    sorry
+    induction xs with
+    | nil =>
+      simp [stakni, preslikaj]
+    | cons x xs' ih =>
+      simp [stakni, preslikaj]
+      rw [ih]
 
 theorem trd11 {A B : Type} {f : A → B} {xs : List A} : preslikaj f (obrni xs) = obrni (preslikaj f xs) :=
   by
-    sorry
+    induction xs with
+    | nil =>
+      simp [obrni, preslikaj]
+    | cons x xs' ih =>
+      simp [obrni,preslikaj]
+      rw [trd10, ih]
+      simp [preslikaj]
+
+
 
 -- 2. Dvojiška drevesa
 inductive tree (A : Type) : Type where
@@ -196,36 +247,68 @@ theorem trd14 {A : Type} {t : tree A} : globina (zrcali t) = globina t :=
     | node x l r ihl ihr =>
       simp [zrcali, globina]
       rw [ihl, ihr]
-      rw [max_comm]
+      simp [max_comm]
 
 
 
 theorem trd15 {A : Type} {t : tree A} : zrcali (zrcali t) = t :=
   by
-    sorry
+    induction t with
+    | empty  =>
+      simp [zrcali]
+    | node x l r ihl ihr =>
+      simp [zrcali]
+      rw [ihl, ihr]
+      exact ⟨ rfl, rfl ⟩
 
 -- 2.c. Zbiranje elementov drevesa
 def zberi {A : Type} : tree A → List A :=
   fun t =>
+    match t with
+    | .empty => []
+    | .node x l r =>
+      stakni (zberi l) (stakni [x] (zberi r))
 
 
 -- Trditvi
 theorem trd16 {A : Type} {y : A} {xs ys : List A} : stakni xs (y::ys) = stakni (stakni xs [y]) ys :=
   by
-    sorry
+    induction xs with
+    | nil =>
+      simp [stakni]
+    | cons x xs' ih =>
+      simp [stakni]
+      rw [ih]
 
 theorem trd17 {A : Type} {t : tree A} : zberi (zrcali t) = obrni (zberi t) :=
   by
-    sorry
+    induction t with
+    | empty =>
+      simp [zberi, zrcali, obrni]
+    | node x l r ihl ihr =>
+      simp [zrcali, zberi, stakni]
+      rw [ihl, ihr]
+      rw [trd16]
+      simp [trd5, obrni]
+
+
 
 -- 2.d. Število elementov drevesa
 def velikost {A : Type} : tree A → Nat :=
   fun t =>
-    sorry
+    match t with
+    | .empty => 0
+    | .node _ l r => 1 + velikost l + velikost r
 
 theorem trd18 {A : Type} {t : tree A} : velikost (zrcali t) = velikost t :=
   by
-    sorry
+    induction t with
+    | empty =>
+      simp [zrcali]
+    | node x l r ihl ihr =>
+      simp [zrcali, velikost]
+      rw [ihl, ihr]
+      rw [Nat.add_assoc, Nat.add_comm (velikost r) (velikost l), ← Nat.add_assoc]
 
 -- 3. Indukcija na pomožnih funkcijah z akumulatorjem - Seznami
 
@@ -239,8 +322,8 @@ def obrni' {A : Type} : List A → List A :=
     aux xs []
 
 -- Dokažite, da je vaša funkcija pravilna
-theorem aux_deluje_pravilno {A: Type} : ∀ (xs acc: List A), obrni'.aux acc = stakni (obrni xs) acc
-  := by
+theorem aux_deluje_pravilno {A: Type} : ∀ (xs acc : List A), obrni'.aux xs acc = stakni (obrni xs) acc :=
+  by
     intro xs acc
     induction xs generalizing acc with
     | nil =>
@@ -254,3 +337,9 @@ theorem aux_deluje_pravilno {A: Type} : ∀ (xs acc: List A), obrni'.aux acc = s
 
 theorem obrni_enako_obrni' {A : Type} : ∀ {xs : List A}, obrni xs = obrni' xs :=
   by
+    intro xs
+    calc
+      obrni xs
+      _ = stakni (obrni xs) [] := by rw [trd3]
+      _ = obrni'.aux xs [] := by rw [aux_deluje_pravilno]
+      _ = obrni' xs := by simp [obrni']
